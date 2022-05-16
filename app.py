@@ -4,7 +4,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
 
-client = MongoClient()
+client = MongoClient('localhost',27017)
 db = client.turtlegram
 
 
@@ -19,18 +19,22 @@ def hello_world():
 
 @app.route("/signup", methods=["POST"])
 def sign_up():
-    email_receive = request.form['email_give']
-    pw_receive = request.form['pw_give']
+    data = json.loads(request.data)
+    print(data.get('email'))
+    print(data['password'])
 
-    pw_receive = hashlib.sha256(pw_receive.encode('utf-8')).hexdigest()
+    pw = data.get('password', None)
+    hashed_password= hashlib.sha256(pw.encode('utf-8')).hexdigest()
     
     doc = {
-        'user_email': email_receive,
-        'user_pw': pw_receive
+        'email': data.get('email'),
+        # 'password': data.get('password')
+        'password' : hashed_password
     }
+    user = db.users.insert_one(doc)
     
-    db.users.insert_one(doc)
     return jsonify({'message': 'success','msg': '회원가입 되었습니다!'})
+
     # data = json.loads(request.data) # 자주 쓰일 스타일
     # print(data)
     # print(data.get('id'))
