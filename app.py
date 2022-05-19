@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from functools import wraps
 import json
 import hashlib
-from unittest import result
 from bson import ObjectId
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
@@ -46,15 +45,16 @@ def sign_up():
     print(data.get('email'))
     print(data['password'])
 
+    email = data.get('email')
     pw = data.get('password', None)
     hashed_password= hashlib.sha256(pw.encode('utf-8')).hexdigest()
     
     doc = {
-        'email': data.get('email'),
+        'email': email,
         # 'password': data.get('password')
         'password' : hashed_password
     }
-    user = db.users.insert_one(doc)
+    db.users.insert_one(doc)
     
     return jsonify({'message': 'success','msg': '회원가입 되었습니다!'})
 
@@ -129,6 +129,17 @@ def get_article():
         article["_id"] = str(article["_id"])
 
     return jsonify({"message":"success", "articles":articles})
+
+@app.route("/article/<article_id>", methods=["GET"])
+def get_article_detail(article_id):
+    print(article_id)
+
+    article = db.article.find_one({'_id':ObjectId(article_id)})
+    print(article)
+
+    article["_id"] = str(article["_id"])
+
+    return jsonify({"message":"success", "article":article})
 
 if __name__ =='__main__':
     app.run('0.0.0.0', port=5000, debug=True)
