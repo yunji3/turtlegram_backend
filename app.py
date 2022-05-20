@@ -19,7 +19,7 @@ db = client.turtlegram
 
 def autorize(f):
     @wraps(f)
-    def decorated_function():
+    def decorated_function(*args, **kwargs):
         if not 'Authorization' in request.headers:
             abort(401)
         token = request.headers['Authorization']
@@ -27,7 +27,7 @@ def autorize(f):
             user = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         except:
             abort(401)
-        return f(user)
+        return f(user,*args, **kwargs)
     return decorated_function
 
 
@@ -97,7 +97,7 @@ def get_user_info(user):
        
     print(result)
 
-    return jsonify({'message': 'success', 'email':result["email"]})
+    return jsonify({'message': 'success', 'email':result["email"],"id":user["id"]})
 
   
 @app.route("/article", methods=["POST"])
@@ -136,10 +136,45 @@ def get_article_detail(article_id):
 
     article = db.article.find_one({'_id':ObjectId(article_id)})
     print(article)
+    if article:
+        article["_id"] = str(article["_id"])
+        return jsonify({"message":"success", "article":article})
+    else:
+        return jsonify({"message":"fail"}), 404
 
-    article["_id"] = str(article["_id"])
 
-    return jsonify({"message":"success", "article":article})
+@app.route("/article/<article_id>", methods=["PATCH"])
+@autorize
+def patch_article_detail(user, article_id):
+
+    data = json.loads(request.data)
+    title = data.get("title")
+    content = data.get("content")
+
+    article = db.article.update_one({"_id":ObjectId(article_id),"user":user["id"]},{
+        "$set":{"title":title, "content":content}})
+    print(article.matched_count)
+    
+    if article.matched_count:
+        return jsonify({"message":"success"})
+    else:
+        return jsonify({"message":"fail"}), 403
+
+
+@app.route("/article/<article_id>", methods=["DELETE"])
+@autorize
+def delete_article_detail(user, article_id):
+    article = db.article.delete_one(
+        {"_id":ObjectId(article_id),"user":user["id"]})
+    
+    if article.deleted_count:
+          return jsonify({"message":"success"})
+    else:
+        return jsonify({"message":"fail"}), 403
+
+
+
+
 
 if __name__ =='__main__':
     app.run('0.0.0.0', port=5000, debug=True)
